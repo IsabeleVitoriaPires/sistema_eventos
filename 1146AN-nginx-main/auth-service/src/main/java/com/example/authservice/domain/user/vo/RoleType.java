@@ -2,12 +2,17 @@ package com.example.authservice.domain.user.vo;
 
 import lombok.Getter;
 
+/**
+ * Roles do sistema de compra de ingressos
+ * USER: Usuário comum que compra ingressos
+ * ORGANIZER: Organizador de eventos
+ * ADMIN: Administrador do sistema
+ */
 @Getter
 public enum RoleType {
-    CUSTOMER(1),
-    WAITER(2),
-    CHEF(3),
-    ADMIN(4);
+    USER(1),
+    ORGANIZER(2),
+    ADMIN(3);
 
     private final int level;
 

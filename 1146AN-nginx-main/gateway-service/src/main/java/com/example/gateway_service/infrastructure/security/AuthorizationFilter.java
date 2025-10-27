@@ -1,4 +1,4 @@
-package com.example.gateway_service.infastructure.config;
+package com.example.gateway_service.infrastructure.security;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -19,15 +19,29 @@ import com.example.gateway_service.domain.user.vo.RoleType;
 
 import reactor.core.publisher.Mono;
 
+/**
+ * Filtro de autorização para o sistema de compra de ingressos
+ * Define as rotas protegidas e suas respectivas roles necessárias
+ */
 @Component
 public class AuthorizationFilter implements WebFilter {
 
     @Value("${jwt.secret}")
     private String jwtSecret;
 
+    /**
+     * Mapeamento de rotas protegidas e suas roles mínimas necessárias
+     * USER: Pode comprar ingressos e visualizar seus pedidos
+     * ORGANIZER: Pode criar eventos e visualizar dashboard
+     * ADMIN: Tem acesso total ao sistema
+     */
     private static final Map<String, RoleType> routeRole = Map.of(
-        "/demo1/waiter", RoleType.WAITER,
-        "/demo1/customer", RoleType.CUSTOMER
+        "/api/tickets/purchase", RoleType.USER,
+        "/api/purchases", RoleType.USER,
+        "/api/events/create", RoleType.ORGANIZER,
+        "/api/events/manage", RoleType.ORGANIZER,
+        "/api/dashboard", RoleType.ORGANIZER,
+        "/api/admin", RoleType.ADMIN
     );
 
     private boolean isAuthorized(String path, RoleType role) {
