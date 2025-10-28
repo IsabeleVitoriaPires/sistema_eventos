@@ -51,21 +51,21 @@ Cada módulo é organizado em três camadas:
 ## Funcionalidades
 
 ### Visitantes (Sem autenticação)
-- ✅ Visualizar eventos disponíveis
-- ✅ Ver detalhes dos eventos
-- ✅ Pesquisar eventos por nome
+- Visualizar eventos disponíveis
+- Ver detalhes dos eventos
+- Pesquisar eventos por nome
 
 ### Usuários (Com autenticação)
-- ✅ Cadastro de conta
-- ✅ Login
-- ✅ Recuperação de senha
-- ✅ Compra de ingressos
-- ✅ Preenchimento de dados dos ingressos
+- Cadastro de conta
+- Login
+- Recuperação de senha
+- Compra de ingressos
+- Preenchimento de dados dos ingressos
 
 ### Organizadores
-- ✅ Cadastro de eventos
-- ✅ Dashboard com métricas
-- ✅ Visualização de vendas
+- Cadastro de eventos
+- Dashboard com métricas
+- Visualização de vendas
 
 ## Como Executar
 
@@ -115,7 +115,3 @@ O projeto segue os princípios:
 - Repository Pattern
 - Use Case Pattern
 - Dependency Inversion
-
-## Autor
-
-Desenvolvido para o Sistema de Compra de Ingressos.
