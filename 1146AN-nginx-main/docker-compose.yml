@@ -47,6 +47,23 @@ services:
     networks:
       - app-network
 
+  ticket-service:
+    build:
+      context: ./ticket-service
+    container_name: ticket-service
+    ports:
+      - "8085:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JWT_SECRET=UmaSenhaBemLongaParaNossaAplicacao
+    volumes:
+      - ./ticket-service:/app
+      - ~/.m2:/root/.m2
+    depends_on:
+      - service-discovery
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge
