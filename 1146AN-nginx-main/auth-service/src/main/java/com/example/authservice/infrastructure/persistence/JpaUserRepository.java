@@ -29,6 +29,11 @@ public class JpaUserRepository implements UserRepository {
     }
 
     @Override
+    public Optional<User> findByResetPasswordToken(String token) {
+        return jpa.findByResetPasswordToken(token);
+    }
+
+    @Override
     public User save(User user) {
         return jpa.save(user);
     }

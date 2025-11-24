@@ -17,20 +17,41 @@ public class RegisterUserHandler {
     private final UserRepository userRepository;
     private final PasswordHasher passwordHasher;
 
-    public UserResponse handle(String name, String emailRaw, String passwordRaw) {
+    /**
+     * Handle user registration
+     * Requisito 3.2: Cadastro com email, senha, primeiro nome e sobrenome
+     * Requisito 3.4: Validar email ja cadastrado
+     */
+    public UserResponse handle(String firstName, String lastName, String emailRaw, String passwordRaw, String roleRaw) {
         Email email = Email.of(emailRaw);
 
+        // Requisito 3.4: Check for duplicate email
         if (userRepository.existsByEmail(email.getValue())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email já cadastrado");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Email ja cadastrado. Se voce ja possui uma conta, faca login em /auth/login/password"
+            );
+        }
+
+        // Parse role from string to enum
+        RoleType role;
+        try {
+            role = RoleType.valueOf(roleRaw.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Role inválido. Valores aceitos: USER, ORGANIZER"
+            );
         }
 
         String hashedPassword = passwordHasher.hash(passwordRaw);
-        User user = new User(name, email, RoleType.USER, hashedPassword);
+        User user = new User(firstName, lastName, email, role, hashedPassword);
         User savedUser = userRepository.save(user);
 
         return new UserResponse(
                 savedUser.getId(),
-                savedUser.getName(),
+                savedUser.getFirstName(),
+                savedUser.getLastName(),
                 savedUser.getEmail().getValue(),
                 savedUser.getRole().getValue().name()
         );

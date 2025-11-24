@@ -20,7 +20,8 @@ public class ListUsersHandler {
 
         return page.map(user -> new UserResponse(
                 user.getId(),
-                user.getName(),
+                user.getFirstName(),
+                user.getLastName(),
                 user.getEmail().getValue(),
                 user.getRole().getValue().name()
         ));

@@ -29,9 +29,20 @@ public class UserController {
         return ResponseEntity.ok(page);
     }
 
+    /**
+     * Requisito 3.2: Register new user
+     * POST /users
+     * Body: { "firstName", "lastName", "email", "password", "role" }
+     */
     @PostMapping
     public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterUserRequest request) {
-        UserResponse created =registerUserHandler.handle(request.name(), request.email(), request.password());
+        UserResponse created = registerUserHandler.handle(
+                request.firstName(),
+                request.lastName(),
+                request.email(),
+                request.password(),
+                request.role()
+        );
 
         return ResponseEntity.created(URI.create("/users/" + created.id())).body(created);
     }

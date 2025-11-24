@@ -1,0 +1,82 @@
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      server:
+        webflux:
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins: "*"
+                allowedMethods: "*"
+                allowedHeaders: "*"
+                maxAge: 3600
+          routes:
+            # Auth Service - Register
+            - id: auth-register
+              uri: lb://AUTH-SERVICE
+              predicates:
+                - Path=/api/auth/register
+              filters:
+                - RewritePath=/api/auth/register, /users
+
+            # Auth Service - Login
+            - id: auth-login
+              uri: lb://AUTH-SERVICE
+              predicates:
+                - Path=/api/auth/login
+              filters:
+                - RewritePath=/api/auth/login, /auth/login/password
+
+            # Auth Service - Password Reset Request
+            - id: auth-password-reset-request
+              uri: lb://AUTH-SERVICE
+              predicates:
+                - Path=/api/auth/password/reset/request
+              filters:
+                - RewritePath=/api/auth/password/reset/request, /auth/password/reset/request
+
+            # Auth Service - Password Reset Confirm
+            - id: auth-password-reset-confirm
+              uri: lb://AUTH-SERVICE
+              predicates:
+                - Path=/api/auth/password/reset/confirm
+              filters:
+                - RewritePath=/api/auth/password/reset/confirm, /auth/password/reset/confirm
+
+            # Event Service Routes
+            - id: event-service
+              uri: lb://EVENT-SERVICE
+              predicates:
+                - Path=/api/events/**, /api/organizer/**, /api/dashboard/**
+
+            # Ticket Service - Purchase (specific route with rewrite)
+            - id: ticket-purchase
+              uri: lb://TICKET-SERVICE
+              predicates:
+                - Path=/api/tickets/purchase
+              filters:
+                - RewritePath=/api/tickets/purchase, /api/purchases
+
+            # Ticket Service - General Routes
+            - id: ticket-service
+              uri: lb://TICKET-SERVICE
+              predicates:
+                - Path=/api/tickets/**, /api/purchases/**
+
+# Eureka Client Configuration
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+    fetch-registry: true
+    register-with-eureka: true
+
+# Server Port
+server:
+  port: 8080
+
+# JWT Secret
+jwt:
+  secret: UmaSenhaBemLongaParaNossaAplicacao

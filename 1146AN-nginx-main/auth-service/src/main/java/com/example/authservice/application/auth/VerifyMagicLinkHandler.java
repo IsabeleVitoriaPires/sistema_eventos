@@ -7,6 +7,7 @@ import com.example.authservice.domain.user.User;
 import com.example.authservice.domain.user.UserRepository;
 import com.example.authservice.interfaces.rest.dto.auth.MagicLinkRequest;
 import com.example.authservice.interfaces.rest.dto.auth.TokenResponse;
+import com.example.authservice.interfaces.rest.dto.user.UserResponse;
 import com.example.authservice.support.Digests;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -41,10 +42,20 @@ public class VerifyMagicLinkHandler {
         magicLinkRepository.save(link);
         TokenService.TokenPair pair = tokenService.issue(user);
 
+        // Create UserResponse
+        UserResponse userResponse = new UserResponse(
+                user.getId(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail().getValue(),
+                user.getRole().getValue().name()
+        );
+
         return new TokenResponse(
             pair.accessToken(),
             pair.refreshToken(),
-            pair.expiresInSeconds()
+            pair.expiresInSeconds(),
+            userResponse
         );
     }
 }

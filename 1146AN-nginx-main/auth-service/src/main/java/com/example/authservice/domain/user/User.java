@@ -23,7 +23,10 @@ public class User {
     private UUID id;
 
     @Column(nullable = false)
-    private String name;
+    private String firstName;
+
+    @Column(nullable = false)
+    private String lastName;
 
     @Column(nullable = false)
     private String password;
@@ -35,10 +38,37 @@ public class User {
     @Embedded
     private Role role;
 
-    public User(String name, @Valid Email email, RoleType role, String password) {
-        this.name = name;
+    @Column
+    private String resetPasswordToken;
+
+    @Column
+    private Long resetPasswordTokenExpiry;
+
+    public User(String firstName, String lastName, @Valid Email email, RoleType role, String password) {
+        this.firstName = firstName;
+        this.lastName = lastName;
         this.email = email;
         this.role = Role.of(role);
         this.password = password;
+    }
+
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
+
+    public boolean isResetPasswordTokenValid() {
+        if (resetPasswordToken == null || resetPasswordTokenExpiry == null) {
+            return false;
+        }
+        return System.currentTimeMillis() < resetPasswordTokenExpiry;
+    }
+
+    public void clearResetPasswordToken() {
+        this.resetPasswordToken = null;
+        this.resetPasswordTokenExpiry = null;
+    }
+
+    public void promoteToOrganizer() {
+        this.role = Role.of(RoleType.ORGANIZER);
     }
 }

@@ -6,6 +6,7 @@ import com.example.authservice.domain.user.User;
 import com.example.authservice.domain.user.UserRepository;
 import com.example.authservice.domain.user.vo.Email;
 import com.example.authservice.interfaces.rest.dto.auth.TokenResponse;
+import com.example.authservice.interfaces.rest.dto.user.UserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -34,10 +35,21 @@ public class PasswordLoginHandler {
         }
 
         TokenService.TokenPair pair = tokenService.issue(user);
+
+        // Criar UserResponse com os dados do usuário
+        UserResponse userResponse = new UserResponse(
+                user.getId(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail().getValue(),
+                user.getRole().getValue().name()
+        );
+
         return new TokenResponse(
                 pair.accessToken(),
                 pair.refreshToken(),
-                pair.expiresInSeconds()
+                pair.expiresInSeconds(),
+                userResponse
         );
     }
 }

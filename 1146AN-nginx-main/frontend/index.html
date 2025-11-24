@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JoinUp - Eventos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#f5f7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+            .gradient-text { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+            .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navbar -->
+    <nav class="glass shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <a href="index.html" class="flex items-center space-x-2">
+                    <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                    <span class="text-2xl font-bold gradient-text">JoinUp</span>
+                </a>
+                <div class="flex items-center space-x-4">
+                    <span id="userInfo" class="text-gray-700"></span>
+                    <a href="login.html" id="loginLink" class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition">Login</a>
+                    <button id="logoutBtn" onclick="logout()" class="hidden px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">Sair</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header with Search -->
+        <div class="mb-8">
+            <h2 class="text-4xl font-bold text-gray-800 mb-4">Eventos Disponíveis</h2>
+            <div class="flex gap-2">
+                <input type="text" id="searchInput" placeholder="Buscar eventos..." onkeyup="if(event.key==='Enter')searchEvents()"
+                    class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                <button onclick="searchEvents()" class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition hover:scale-105">
+                    Buscar
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="text-center py-20">
+            <svg class="animate-spin h-12 w-12 mx-auto text-primary-600" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="mt-4 text-gray-600">Carregando eventos...</p>
+        </div>
+
+        <!-- Events Grid -->
+        <div id="eventsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+        <!-- No Events -->
+        <div id="noEvents" class="hidden text-center py-20">
+            <svg class="w-24 h-24 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-xl text-gray-500 mt-4">Nenhum evento encontrado</p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+
+        window.onload = function() {
+            checkAuth();
+            loadEvents();
+        };
+
+        function checkAuth() {
+            const token = localStorage.getItem('jwt_token');
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+            if (token && user.email) {
+                document.getElementById('loginLink').classList.add('hidden');
+                document.getElementById('logoutBtn').classList.remove('hidden');
+
+                let userHtml = `<span class="font-medium">Olá, ${user.firstName || user.email}</span>`;
+
+                if (user.role === 'ORGANIZER') {
+                    userHtml += `
+                        <a href="dashboard.html" class="ml-4 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition">Dashboard</a>
+                        <a href="criar-evento.html" class="ml-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition">Criar Evento</a>
+                    `;
+                }
+
+                document.getElementById('userInfo').innerHTML = userHtml;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('jwt_token');
+            localStorage.removeItem('user');
+            window.location.reload();
+        }
+
+        async function loadEvents() {
+            try {
+                const response = await fetch(`${API_BASE}/api/events`);
+                const events = await response.json();
+
+                document.getElementById('loading').classList.add('hidden');
+
+                if (events.length === 0) {
+                    document.getElementById('noEvents').classList.remove('hidden');
+                    return;
+                }
+
+                displayEvents(events);
+            } catch (error) {
+                console.error('Erro ao carregar eventos:', error);
+                document.getElementById('loading').innerHTML = `
+                    <div class="text-center">
+                        <svg class="w-16 h-16 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p class="mt-4 text-red-600">Erro ao carregar eventos. Verifique se o servidor está rodando.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function searchEvents() {
+            const searchTerm = document.getElementById('searchInput').value;
+
+            if (!searchTerm) {
+                loadEvents();
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/events/search?q=${encodeURIComponent(searchTerm)}`);
+                const events = await response.json();
+
+                if (events.length === 0) {
+                    document.getElementById('eventsContainer').innerHTML = '';
+                    document.getElementById('noEvents').classList.remove('hidden');
+                    return;
+                }
+
+                document.getElementById('noEvents').classList.add('hidden');
+                displayEvents(events);
+            } catch (error) {
+                console.error('Erro ao buscar eventos:', error);
+            }
+        }
+
+        function displayEvents(events) {
+            const container = document.getElementById('eventsContainer');
+            container.innerHTML = '';
+
+            events.forEach(event => {
+                const date = new Date(event.eventDate);
+                const formattedDate = date.toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const available = event.availableTickets || 0;
+                const total = event.totalTickets || 0;
+                const percentage = total > 0 ? ((total - available) / total * 100).toFixed(0) : 0;
+
+                const eventCard = document.createElement('div');
+                eventCard.className = 'bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer';
+                eventCard.onclick = () => viewEvent(event.id);
+
+                eventCard.innerHTML = `
+                    <div class="bg-gradient-to-r from-primary-600 to-purple-600 h-48 flex items-center justify-center">
+                        <svg class="w-24 h-24 text-white opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                        </svg>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">${event.name}</h3>
+                        <p class="text-gray-600 mb-4 h-12 overflow-hidden">${event.description || 'Sem descrição'}</p>
+
+                        <div class="space-y-2 mb-4">
+                            <div class="flex items-center text-gray-700">
+                                <svg class="w-5 h-5 mr-2 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <span class="text-sm">${formattedDate}</span>
+                            </div>
+                            <div class="flex items-center text-gray-700">
+                                <svg class="w-5 h-5 mr-2 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                                <span class="text-sm">${event.location}</span>
+                            </div>
+                            <div class="flex items-center text-gray-700">
+                                <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span class="text-lg font-bold text-green-600">R$ ${event.ticketPrice.toFixed(2)}</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                <span>Disponíveis: ${available} de ${total}</span>
+                                <span class="font-bold">${percentage}% vendido</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-gradient-to-r from-primary-600 to-purple-600 h-2 rounded-full transition-all" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+
+                        <button onclick="viewEvent('${event.id}')" class="w-full py-3 bg-gradient-to-r from-primary-600 to-purple-600 text-white rounded-lg hover:from-primary-700 hover:to-purple-700 transition font-medium">
+                            Ver Detalhes
+                        </button>
+                    </div>
+                `;
+
+                container.appendChild(eventCard);
+            });
+        }
+
+        function viewEvent(eventId) {
+            window.location.href = `evento-detalhes.html?id=${eventId}`;
+        }
+    </script>
+</body>
+</html>

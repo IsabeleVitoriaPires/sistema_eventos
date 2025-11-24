@@ -1,0 +1,5 @@
+service-discovery:15455:8761
+auth-service:15703:8084
+event-service:15759:8083
+ticket-service:15814:8085
+gateway-service:15978:8080

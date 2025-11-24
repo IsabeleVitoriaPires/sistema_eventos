@@ -1,15 +1,89 @@
-version: '3.8'
-
 services:
+  # PostgreSQL para Auth Service
+  postgres-auth:
+    image: postgres:15-alpine
+    container_name: postgres-auth
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL para Event Service
+  postgres-events:
+    image: postgres:15-alpine
+    container_name: postgres-events
+    environment:
+      POSTGRES_DB: events_db
+      POSTGRES_USER: events_user
+      POSTGRES_PASSWORD: events_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-events-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U events_user -d events_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL para Ticket Service
+  postgres-tickets:
+    image: postgres:15-alpine
+    container_name: postgres-tickets
+    environment:
+      POSTGRES_DB: tickets_db
+      POSTGRES_USER: tickets_user
+      POSTGRES_PASSWORD: tickets_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-tickets-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tickets_user -d tickets_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PgAdmin - Interface gráfica para PostgreSQL
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@eventos.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - app-network
+    depends_on:
+      - postgres-auth
+      - postgres-events
+      - postgres-tickets
+
   service-discovery:
     build:
       context: ./service-discovery
     container_name: service-discovery
     ports:
       - "8761:8080"
-    volumes:
-      - ./service-discovery:/app
-      - ~/.m2:/root/.m2
     networks:
       - app-network
 
@@ -20,12 +94,38 @@ services:
     ports:
       - "8084:8080"
     environment:
+      - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery:8080/eureka
-    volumes:
-      - ./auth-service:/app
-      - ~/.m2:/root/.m2
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-auth:5432/auth_db
+      - SPRING_DATASOURCE_USERNAME=auth_user
+      - SPRING_DATASOURCE_PASSWORD=auth_pass
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     depends_on:
-      - service-discovery
+      postgres-auth:
+        condition: service_healthy
+      service-discovery:
+        condition: service_started
+    networks:
+      - app-network
+
+  event-service:
+    build:
+      context: ./event-service
+    container_name: event-service
+    ports:
+      - "8083:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-events:5432/events_db
+      - SPRING_DATASOURCE_USERNAME=events_user
+      - SPRING_DATASOURCE_PASSWORD=events_pass
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery:8080/eureka
+    depends_on:
+      postgres-events:
+        condition: service_healthy
+      service-discovery:
+        condition: service_started
     networks:
       - app-network
 
@@ -38,12 +138,10 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery:8080/eureka
       - JWT_SECRET=UmaSenhaBemLongaParaNossaAplicacao
-    volumes:
-      - ./gateway-service:/app
-      - ~/.m2:/root/.m2
     depends_on:
       - service-discovery
       - auth-service
+      - event-service
     networks:
       - app-network
 
@@ -56,14 +154,24 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - JWT_SECRET=UmaSenhaBemLongaParaNossaAplicacao
-    volumes:
-      - ./ticket-service:/app
-      - ~/.m2:/root/.m2
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-tickets:5432/tickets_db
+      - SPRING_DATASOURCE_USERNAME=tickets_user
+      - SPRING_DATASOURCE_PASSWORD=tickets_pass
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     depends_on:
-      - service-discovery
+      postgres-tickets:
+        condition: service_healthy
+      service-discovery:
+        condition: service_started
     networks:
       - app-network
 
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  postgres-auth-data:
+  postgres-events-data:
+  postgres-tickets-data:
+  pgadmin-data:

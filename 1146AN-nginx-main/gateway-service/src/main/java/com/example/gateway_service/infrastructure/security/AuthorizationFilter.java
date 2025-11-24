@@ -34,12 +34,18 @@ public class AuthorizationFilter implements WebFilter {
      * USER: Pode comprar ingressos e visualizar seus pedidos
      * ORGANIZER: Pode criar eventos e visualizar dashboard
      * ADMIN: Tem acesso total ao sistema
+     *
+     * Rotas públicas (não listadas aqui):
+     * - GET /api/events (listar eventos)
+     * - GET /api/events/{id} (detalhes do evento)
+     * - GET /api/events/search (pesquisar eventos)
+     * - POST /users (cadastro de usuário)
+     * - POST /auth/login/password (login)
      */
     private static final Map<String, RoleType> routeRole = Map.of(
         "/api/tickets/purchase", RoleType.USER,
         "/api/purchases", RoleType.USER,
-        "/api/events/create", RoleType.ORGANIZER,
-        "/api/events/manage", RoleType.ORGANIZER,
+        "/api/organizer/events", RoleType.ORGANIZER,
         "/api/dashboard", RoleType.ORGANIZER,
         "/api/admin", RoleType.ADMIN
     );
@@ -56,6 +62,10 @@ public class AuthorizationFilter implements WebFilter {
 
     private Mono<Void> unauthorized(ServerWebExchange exchange) {
         exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+        // Adicionar headers CORS para que o navegador mostre o erro 401 corretamente
+        exchange.getResponse().getHeaders().add("Access-Control-Allow-Origin", "*");
+        exchange.getResponse().getHeaders().add("Access-Control-Allow-Methods", "*");
+        exchange.getResponse().getHeaders().add("Access-Control-Allow-Headers", "*");
         return exchange.getResponse().setComplete();
     }
     
@@ -63,6 +73,11 @@ public class AuthorizationFilter implements WebFilter {
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getPath().toString();
+
+        // Permitir requisições OPTIONS (preflight CORS) sem autenticação
+        if ("OPTIONS".equals(request.getMethod().name())) {
+            return chain.filter(exchange);
+        }
 
         // verifica se a rota existe na nossa lista de rotas protegidas
         if (routeRole.entrySet().stream().noneMatch(entry -> path.startsWith(entry.getKey()))) {
@@ -100,6 +115,10 @@ public class AuthorizationFilter implements WebFilter {
 
         if (!isAuthorized(path, role)) {
             exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+            // Adicionar headers CORS para que o navegador mostre o erro 403 corretamente
+            exchange.getResponse().getHeaders().add("Access-Control-Allow-Origin", "*");
+            exchange.getResponse().getHeaders().add("Access-Control-Allow-Methods", "*");
+            exchange.getResponse().getHeaders().add("Access-Control-Allow-Headers", "*");
             return exchange.getResponse().setComplete();
         }
 
